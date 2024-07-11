@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,32 +12,28 @@ import {
   Alert,
 } from 'react-native';
 import {createUserWithEmailAndPassword} from 'firebase/auth';
-import {auth, database} from '../config/firebase';
-import firestore from '@react-native-firebase/firestore';
-
+import {auth} from '../config/firebase';
+import {getDatabase, ref, set} from 'firebase/database';
 const backImage = require('../assets/backImage.png');
 
 export default function Signup({navigation}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
+  const [name, setName] = useState('');
   const onHandleSignup = () => {
     if (email !== '' && password !== '') {
       createUserWithEmailAndPassword(auth, email, password)
         .then(() => console.log('Signup success'))
         .catch(err => Alert.alert('Login error', err.message));
-
-      firestore()
-        .collection('users')
-        .doc(email)
-        .set({
-          createdAt: new Date(),
-          email: email,
-          status: 'online',
-        })
-        .then(() => {
-          console.log('User added!');
-        });
+      const database = getDatabase();
+      set(ref(database, 'users/' + name), {
+        createdAt: new Date(),
+        email: email,
+        name: name,
+        status: 'online',
+      }).then(() => {
+        console.log('User added!');
+      });
     }
   };
 
@@ -47,6 +43,15 @@ export default function Signup({navigation}) {
       <View style={styles.whiteSheet} />
       <SafeAreaView style={styles.form}>
         <Text style={styles.title}>Sign Up</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter name"
+          autoCapitalize="none"
+          autoFocus={true}
+          value={name}
+          onChangeText={text => setName(text)}
+          placeholderTextColor={'black'}
+        />
         <TextInput
           style={styles.input}
           placeholder="Enter email"

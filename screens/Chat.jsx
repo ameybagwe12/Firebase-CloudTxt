@@ -1,21 +1,21 @@
 import React, {useState, useEffect, useLayoutEffect, useCallback} from 'react';
 import {TouchableOpacity, View, Image, Text} from 'react-native';
 import {GiftedChat, Bubble, Send} from 'react-native-gifted-chat';
-import {
-  collection,
-  addDoc,
-  orderBy,
-  query,
-  onSnapshot,
-} from 'firebase/firestore';
+// import {
+//   collection,
+//   addDoc,
+//   orderBy,
+//   query,
+//   onSnapshot,
+// } from 'firebase/firestore';
 import InChatViewFile from '../components/InChatViewFile';
 import InChatFileTransfer from '../components/InChatFileTransfer';
 import {signOut} from 'firebase/auth';
-import {auth, database} from '../config/firebase';
+import {auth} from '../config/firebase';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import * as DocumentPicker from 'react-native-document-picker';
-import firestore from '@react-native-firebase/firestore';
+import database from '@react-native-firebase/database';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -25,6 +25,8 @@ export default function Chat() {
   const [filePath, setFilePath] = useState('');
   const [fileVisible, setFileVisible] = useState(false);
   const [users, setUsers] = useState([]);
+  const [logUser, setLogUser] = useState([]);
+
   const navigation = useNavigation();
 
   const onSignOut = async () => {
@@ -39,16 +41,13 @@ export default function Chat() {
     // Create a new Date object with the timestamp
 
     if (currentUser) {
-      firestore()
-        .collection('users')
-        .doc(currentUser.email)
+      database()
+        .ref(`/users/${logUser.name}`)
         .update({
           status: 'offline',
           lastLogin: formattedDate,
         })
-        .then(() => {
-          console.log('User updated!');
-        });
+        .then(() => console.log('Data updated.'));
     }
     signOut(auth).catch(error => console.log('Error logging out: ', error));
   };
@@ -73,46 +72,46 @@ export default function Chat() {
   }, [navigation]);
 
   useEffect(() => {
-    const fetchOtherUserStatus = async () => {
-      const currentUserEmail = auth?.currentUser?.email;
-      firestore()
-        .collection('users')
-        .get()
-        .then(querySnapshot => {
-          querySnapshot.forEach(documentSnapshot => {
-            const data = documentSnapshot.data();
-            if (data.email !== currentUserEmail) {
-              setUsers(data);
-            }
-          });
+    const currentUserEmail = auth?.currentUser?.email;
+
+    database()
+      .ref('/users')
+      .once('value')
+      .then(snapshot => {
+        snapshot.forEach(doc => {
+          const data = doc.val();
+          if (data.email !== currentUserEmail) {
+            setUsers(data);
+          } else {
+            setLogUser(data);
+          }
         });
-    };
-
-    fetchOtherUserStatus();
+        console.log('User data: ', snapshot.val());
+      });
   }, []);
 
-  useLayoutEffect(() => {
-    const collectionRef = collection(database, 'chats');
-    const q = query(collectionRef, orderBy('createdAt', 'desc'));
+  // useLayoutEffect(() => {
+  //   const collectionRef = collection(database, 'chats');
+  //   const q = query(collectionRef, orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, querySnapshot => {
-      console.log('querySnapshot unsusbscribe');
-      setMessages(
-        querySnapshot.docs.map(doc => ({
-          _id: doc.data()._id,
-          createdAt: doc.data().createdAt.toDate(),
-          text: doc.data().text,
-          user: doc.data().user,
-          image: doc.data().imagePath,
-          file: doc.data().filePath,
-        })),
-      );
-      if (messages) {
-        console.log('messages: ', messages);
-      }
-    });
-    return unsubscribe;
-  }, []);
+  //   const unsubscribe = onSnapshot(q, querySnapshot => {
+  //     console.log('querySnapshot unsusbscribe');
+  //     setMessages(
+  //       querySnapshot.docs.map(doc => ({
+  //         _id: doc.data()._id,
+  //         createdAt: doc.data().createdAt.toDate(),
+  //         text: doc.data().text,
+  //         user: doc.data().user,
+  //         image: doc.data().imagePath,
+  //         file: doc.data().filePath,
+  //       })),
+  //     );
+  //     if (messages) {
+  //       console.log('messages: ', messages);
+  //     }
+  //   });
+  //   return unsubscribe;
+  // }, []);
 
   const scrollToBottomComponent = () => {
     return <Icon name="angle-double-down" size={22} color="#333" />;
@@ -300,13 +299,13 @@ export default function Chat() {
           GiftedChat.append(previousMessages, newMessage),
         );
         const {_id, createdAt, text, user} = messages[0];
-        addDoc(collection(database, 'chats'), {
-          _id,
-          createdAt,
-          text,
-          user,
-          imagePath,
-        });
+        // addDoc(collection(database, 'chats'), {
+        //   _id,
+        //   createdAt,
+        //   text,
+        //   user,
+        //   imagePath,
+        // });
         setImagePath('');
         setIsAttachImage(false);
       } else if (isAttachFile) {
@@ -327,13 +326,13 @@ export default function Chat() {
           GiftedChat.append(previousMessages, newMessage),
         );
         const {_id, createdAt, text, user} = messages[0];
-        addDoc(collection(database, 'chats'), {
-          _id,
-          createdAt,
-          text,
-          user,
-          filePath,
-        });
+        // addDoc(collection(database, 'chats'), {
+        //   _id,
+        //   createdAt,
+        //   text,
+        //   user,
+        //   filePath,
+        // });
         setFilePath('');
         setIsAttachFile(false);
       } else {
@@ -343,12 +342,12 @@ export default function Chat() {
           GiftedChat.append(previousMessages, messages),
         );
         const {_id, createdAt, text, user} = messages[0];
-        addDoc(collection(database, 'chats'), {
-          _id,
-          createdAt,
-          text,
-          user,
-        });
+        // addDoc(collection(database, 'chats'), {
+        //   _id,
+        //   createdAt,
+        //   text,
+        //   user,
+        // });
       }
       // setMessages([...messages, ...messages]);
     },

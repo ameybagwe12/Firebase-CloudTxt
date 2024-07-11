@@ -11,28 +11,27 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
+import database from '@react-native-firebase/database';
 import {signInWithEmailAndPassword} from 'firebase/auth';
 import {auth} from '../config/firebase';
 const backImage = require('../assets/backImage.png');
-import firestore from '@react-native-firebase/firestore';
+
 export default function Login({navigation}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
+  const [name, setName] = useState('');
   const onHandleLogin = () => {
     if (email !== '' && password !== '') {
       signInWithEmailAndPassword(auth, email, password)
         .then(() => console.log('Login success'))
         .catch(err => Alert.alert('Login error', err.message));
-      firestore()
-        .collection('users')
-        .doc(email)
+
+      database()
+        .ref(`/users/${name}`)
         .update({
           status: 'online',
         })
-        .then(() => {
-          console.log('User updated!');
-        });
+        .then(() => console.log('Data updated.'));
     }
   };
 
@@ -42,6 +41,15 @@ export default function Login({navigation}) {
       <View style={styles.whiteSheet} />
       <SafeAreaView style={styles.form}>
         <Text style={styles.title}>Log In</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter name"
+          autoCapitalize="none"
+          autoFocus={true}
+          value={name}
+          onChangeText={text => setName(text)}
+          placeholderTextColor={'black'}
+        />
         <TextInput
           style={styles.input}
           placeholder="Enter email"
