@@ -16,6 +16,7 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import * as DocumentPicker from 'react-native-document-picker';
 import database from '@react-native-firebase/database';
+import {getDatabase, set, ref} from 'firebase/database';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -28,7 +29,7 @@ export default function Chat() {
   const [logUser, setLogUser] = useState([]);
 
   const navigation = useNavigation();
-
+  console.log(logUser);
   const onSignOut = async () => {
     const currentUser = auth.currentUser;
     const timestamp = parseInt(Date.now(), 10); // Convert string to integer
@@ -82,36 +83,38 @@ export default function Chat() {
           const data = doc.val();
           if (data.email !== currentUserEmail) {
             setUsers(data);
-          } else {
-            setLogUser(data);
           }
+          setLogUser(data);
         });
         console.log('User data: ', snapshot.val());
       });
   }, []);
 
-  // useLayoutEffect(() => {
-  //   const collectionRef = collection(database, 'chats');
-  //   const q = query(collectionRef, orderBy('createdAt', 'desc'));
+  useEffect(() => {
+    database()
+      .ref('/chats')
+      .once('value')
+      .then(snapshot => {
+        const messagesArray = [];
+        snapshot.forEach(doc => {
+          messagesArray.push({
+            _id: doc.val()._id,
+            createdAt: new Date(doc.val().createdAt), // Ensure createdAt is converted to Date object if it's a timestamp
+            text: doc.val().text,
+            user: doc.val().user,
+            image: doc.val().imagePath,
+            file: doc.val().filePath,
+          });
+        });
+        setMessages(messagesArray);
+      });
+  }, []);
 
-  //   const unsubscribe = onSnapshot(q, querySnapshot => {
-  //     console.log('querySnapshot unsusbscribe');
-  //     setMessages(
-  //       querySnapshot.docs.map(doc => ({
-  //         _id: doc.data()._id,
-  //         createdAt: doc.data().createdAt.toDate(),
-  //         text: doc.data().text,
-  //         user: doc.data().user,
-  //         image: doc.data().imagePath,
-  //         file: doc.data().filePath,
-  //       })),
-  //     );
-  //     if (messages) {
-  //       console.log('messages: ', messages);
-  //     }
-  //   });
-  //   return unsubscribe;
-  // }, []);
+  useEffect(() => {
+    if (messages.length > 0) {
+      console.log('messages: ', messages);
+    }
+  }, [messages]);
 
   const scrollToBottomComponent = () => {
     return <Icon name="angle-double-down" size={22} color="#333" />;
@@ -306,6 +309,14 @@ export default function Chat() {
         //   user,
         //   imagePath,
         // });
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+          imagePath: imagePath,
+        }).then(() => {
+          console.log('Chat added!');
+        });
         setImagePath('');
         setIsAttachImage(false);
       } else if (isAttachFile) {
@@ -333,6 +344,14 @@ export default function Chat() {
         //   user,
         //   filePath,
         // });
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+          filePath: filePath,
+        }).then(() => {
+          console.log('Chat added!');
+        });
         setFilePath('');
         setIsAttachFile(false);
       } else {
@@ -348,6 +367,13 @@ export default function Chat() {
         //   text,
         //   user,
         // });
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+        }).then(() => {
+          console.log('Chat added!');
+        });
       }
       // setMessages([...messages, ...messages]);
     },
