@@ -15,6 +15,7 @@ import {auth, database} from '../config/firebase';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import * as DocumentPicker from 'react-native-document-picker';
+import firestore from '@react-native-firebase/firestore';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -23,10 +24,32 @@ export default function Chat() {
   const [imagePath, setImagePath] = useState('');
   const [filePath, setFilePath] = useState('');
   const [fileVisible, setFileVisible] = useState(false);
-
+  const [users, setUsers] = useState([]);
   const navigation = useNavigation();
 
-  const onSignOut = () => {
+  const onSignOut = async () => {
+    const currentUser = auth.currentUser;
+    const timestamp = parseInt(Date.now(), 10); // Convert string to integer
+
+    // Create a new Date object with the timestamp
+    const date = new Date(timestamp);
+
+    // Format the date as a readable string
+    const formattedDate = date.toLocaleString();
+    // Create a new Date object with the timestamp
+
+    if (currentUser) {
+      firestore()
+        .collection('users')
+        .doc(currentUser.email)
+        .update({
+          status: 'offline',
+          lastLogin: formattedDate,
+        })
+        .then(() => {
+          console.log('User updated!');
+        });
+    }
     signOut(auth).catch(error => console.log('Error logging out: ', error));
   };
 
@@ -48,6 +71,25 @@ export default function Chat() {
       ),
     });
   }, [navigation]);
+
+  useEffect(() => {
+    const fetchOtherUserStatus = async () => {
+      const currentUserEmail = auth?.currentUser?.email;
+      firestore()
+        .collection('users')
+        .get()
+        .then(querySnapshot => {
+          querySnapshot.forEach(documentSnapshot => {
+            const data = documentSnapshot.data();
+            if (data.email !== currentUserEmail) {
+              setUsers(data);
+            }
+          });
+        });
+    };
+
+    fetchOtherUserStatus();
+  }, []);
 
   useLayoutEffect(() => {
     const collectionRef = collection(database, 'chats');
@@ -331,6 +373,10 @@ export default function Chat() {
           ) : null}
         </>
       ))} */}
+      <View style={{padding: 10}}>
+        <Text style={{color: 'black'}}>User Status: {users.status}</Text>
+        <Text style={{color: 'black'}}>User Last Login: {users.lastLogin}</Text>
+      </View>
       <GiftedChat
         alwaysShowSend
         renderSend={renderSend}
