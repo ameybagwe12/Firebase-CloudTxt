@@ -29,31 +29,26 @@ export default function Chat() {
   const [logUser, setLogUser] = useState([]);
 
   const navigation = useNavigation();
-  console.log(logUser);
-  const onSignOut = async () => {
-    const currentUser = auth.currentUser;
-    const timestamp = parseInt(Date.now(), 10); // Convert string to integer
 
-    // Create a new Date object with the timestamp
-    const date = new Date(timestamp);
+  useEffect(() => {
+    const onSignOut = async () => {
+      const currentUser = auth.currentUser;
+      const timestamp = parseInt(Date.now(), 10);
+      const date = new Date(timestamp);
+      const formattedDate = date.toLocaleString();
 
-    // Format the date as a readable string
-    const formattedDate = date.toLocaleString();
-    // Create a new Date object with the timestamp
+      if (currentUser && logUser?.name) {
+        database()
+          .ref(`/users/${logUser.name}`)
+          .update({
+            status: 'offline',
+            lastLogin: formattedDate,
+          })
+          .then(() => console.log('Data updated'));
+        signOut(auth).catch(error => console.log('Error logging out:', error));
+      }
+    };
 
-    if (currentUser) {
-      database()
-        .ref(`/users/${logUser.name}`)
-        .update({
-          status: 'offline',
-          lastLogin: formattedDate,
-        })
-        .then(() => console.log('Data updated.'));
-    }
-    signOut(auth).catch(error => console.log('Error logging out: ', error));
-  };
-
-  useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -70,7 +65,7 @@ export default function Chat() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [logUser, navigation]);
 
   useEffect(() => {
     const currentUserEmail = auth?.currentUser?.email;
@@ -83,8 +78,9 @@ export default function Chat() {
           const data = doc.val();
           if (data.email !== currentUserEmail) {
             setUsers(data);
+          } else {
+            setLogUser(data);
           }
-          setLogUser(data);
         });
         console.log('User data: ', snapshot.val());
       });
@@ -401,6 +397,9 @@ export default function Chat() {
       <View style={{padding: 10}}>
         <Text style={{color: 'black'}}>User Status: {users.status}</Text>
         <Text style={{color: 'black'}}>User Last Login: {users.lastLogin}</Text>
+        <Text style={{color: 'black'}}>
+          Status of My Login: {logUser.status}
+        </Text>
       </View>
       <GiftedChat
         alwaysShowSend
