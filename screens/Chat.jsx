@@ -1,5 +1,11 @@
-import React, {useState, useEffect, useLayoutEffect, useCallback} from 'react';
-import {TouchableOpacity, View, Image, Text} from 'react-native';
+import React, {useState, useEffect, useCallback} from 'react';
+import {
+  TouchableOpacity,
+  View,
+  Image,
+  Text,
+  ImageBackground,
+} from 'react-native';
 import {GiftedChat, Bubble, Send} from 'react-native-gifted-chat';
 // import {
 //   collection,
@@ -8,7 +14,7 @@ import {GiftedChat, Bubble, Send} from 'react-native-gifted-chat';
 //   query,
 //   onSnapshot,
 // } from 'firebase/firestore';
-import InChatViewFile from '../components/InChatViewFile';
+// import InChatViewFile from '../components/InChatViewFile';
 import InChatFileTransfer from '../components/InChatFileTransfer';
 import {signOut} from 'firebase/auth';
 import {auth} from '../config/firebase';
@@ -47,8 +53,29 @@ export default function Chat() {
         signOut(auth).catch(error => console.log('Error logging out:', error));
       }
     };
-
+    console.log('USERS', users);
+    console.log('LOG', logUser);
     navigation.setOptions({
+      headerTitle: () => (
+        <View
+          style={{
+            flexDirection: 'row',
+            width: 220,
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 4,
+          }}>
+          <Image
+            source={{
+              uri: 'https://imgs.search.brave.com/pZ2DKWjtw7hzsB-caM9l5n5xAr6aaH4tXxJAIMSHK5s/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzA0Lzk4LzcyLzQz/LzM2MF9GXzQ5ODcy/NDMyM19Gb25BeThM/WVlmRDFCVUMwYmNL/NTZhb1l3dUxISjJH/ZS5qcGc',
+            }}
+            style={{width: 40, height: 40, borderRadius: 50}}
+          />
+          <Text style={{fontSize: 16, fontWeight: '500', color: 'black'}}>
+            {users.name}
+          </Text>
+        </View>
+      ),
       headerRight: () => (
         <TouchableOpacity
           style={{
@@ -64,7 +91,7 @@ export default function Chat() {
         </TouchableOpacity>
       ),
     });
-  }, [logUser, navigation]);
+  }, [logUser, navigation, users]);
 
   useEffect(() => {
     const currentUserEmail = auth?.currentUser?.email;
@@ -188,12 +215,12 @@ export default function Chat() {
         {...props}
         wrapperStyle={{
           right: {
-            backgroundColor: '#2e64e5',
+            backgroundColor: '#DEF9C4',
           },
         }}
         textStyle={{
           right: {
-            color: '#efefef',
+            color: 'black',
           },
         }}
       />
@@ -210,28 +237,24 @@ export default function Chat() {
               marginTop: 5,
               marginRight: 10,
               transform: [{rotateY: '180deg'}],
-              backgroundColor: 'skyblue',
               borderRadius: 5,
               padding: 5,
             }}
             size={25}
-            color="white"
+            color="black"
           />
         </TouchableOpacity>
 
-        <Send {...props}>
+        <Send {...props} containerStyle={{justifyContent: 'center'}}>
           <View>
             <Icon
-              name="share"
+              name="arrow-alt-circle-right"
               style={{
                 marginBottom: 3,
                 marginRight: 10,
-                backgroundColor: 'skyblue',
-                borderRadius: 5,
-                padding: 5,
+                color: 'black',
               }}
               size={25}
-              color="white"
             />
           </View>
         </Send>
@@ -350,7 +373,7 @@ export default function Chat() {
         setFilePath('');
         setIsAttachFile(false);
       } else {
-        console.log('Text attached: ', messages);
+        console.log('Text attached:', messages);
 
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, messages),
@@ -393,38 +416,40 @@ export default function Chat() {
           ) : null}
         </>
       ))} */}
-      <View style={{padding: 10}}>
+      {/* <View style={{padding: 10}}>
         <Text style={{color: 'black'}}>User Status: {users.status}</Text>
         <Text style={{color: 'black'}}>User Last Login: {users.lastLogin}</Text>
         <Text style={{color: 'black'}}>
           Status of My Login: {logUser.status}
         </Text>
-      </View>
-      <GiftedChat
-        alwaysShowSend
-        renderSend={renderSend}
-        scrollToBottom
-        scrollToBottomComponent={scrollToBottomComponent}
-        renderBubble={renderBubble}
-        messages={messages}
-        showAvatarForEveryMessage={false}
-        showUserAvatar={false}
-        onSend={messages => onSend(messages)}
-        messagesContainerStyle={{
-          backgroundColor: '#fff',
-        }}
-        textInputStyle={{
-          backgroundColor: '#fff',
-          borderRadius: 20,
-          color: 'black',
-        }}
-        renderChatFooter={renderChatFooter}
-        user={{
-          _id: auth?.currentUser?.email,
-          avatar:
-            'https://imgs.search.brave.com/pZ2DKWjtw7hzsB-caM9l5n5xAr6aaH4tXxJAIMSHK5s/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzA0Lzk4LzcyLzQz/LzM2MF9GXzQ5ODcy/NDMyM19Gb25BeThM/WVlmRDFCVUMwYmNL/NTZhb1l3dUxISjJH/ZS5qcGc',
-        }}
-      />
+      </View> */}
+      <ImageBackground
+        source={require('../assets/pattern.png')}
+        style={{flex: 1}}>
+        <GiftedChat
+          alwaysShowSend
+          renderSend={renderSend}
+          scrollToBottom
+          scrollToBottomComponent={scrollToBottomComponent}
+          renderBubble={renderBubble}
+          messages={messages}
+          showAvatarForEveryMessage={false}
+          showUserAvatar={false}
+          onSend={messages => onSend(messages)}
+          textInputStyle={{
+            backgroundColor: '#fff',
+            borderRadius: 20,
+            color: 'black',
+          }}
+          renderAvatar={null}
+          renderChatFooter={renderChatFooter}
+          user={{
+            _id: auth?.currentUser?.email,
+            avatar:
+              'https://imgs.search.brave.com/pZ2DKWjtw7hzsB-caM9l5n5xAr6aaH4tXxJAIMSHK5s/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzA0Lzk4LzcyLzQz/LzM2MF9GXzQ5ODcy/NDMyM19Gb25BeThM/WVlmRDFCVUMwYmNL/NTZhb1l3dUxISjJH/ZS5qcGc',
+          }}
+        />
+      </ImageBackground>
     </>
   );
 }
