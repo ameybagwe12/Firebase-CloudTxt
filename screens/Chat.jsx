@@ -24,7 +24,6 @@ export default function Chat() {
   const [isAttachFile, setIsAttachFile] = useState(false);
   const [imagePath, setImagePath] = useState('');
   const [filePath, setFilePath] = useState('');
-  const [fileVisible, setFileVisible] = useState(false);
   const [users, setUsers] = useState([]);
   const [logUser, setLogUser] = useState([]);
 
@@ -161,16 +160,16 @@ export default function Chat() {
             borderBottomRightRadius:
               props.currentMessage.user._id === 2 ? 5 : 15,
           }}
-          onPress={() => setFileVisible(true)}>
+          onPress={() => navigation.navigate('View', {currentMessage})}>
           <InChatFileTransfer
             style={{marginTop: -10}}
             filePath={currentMessage.file}
           />
-          <InChatViewFile
+          {/* <InChatViewFile
             props={props}
             visible={fileVisible}
             onClose={() => setFileVisible(false)}
-          />
+          /> */}
           <View style={{flexDirection: 'column'}}>
             <Text
               style={{
