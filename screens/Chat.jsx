@@ -16,6 +16,7 @@ import ActionSheet from 'react-native-actions-sheet';
 //   onSnapshot,
 // } from 'firebase/firestore';
 // import InChatViewFile from '../components/InChatViewFile';
+import SoundPlayer from 'react-native-sound-player';
 import InChatFileTransfer from '../components/InChatFileTransfer';
 import {signOut} from 'firebase/auth';
 import {auth} from '../config/firebase';
@@ -27,6 +28,8 @@ import {getDatabase, set, ref} from 'firebase/database';
 import Video from 'react-native-video';
 
 export default function Chat() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isAttachImage, setIsAttachImage] = useState(false);
   const [isAttachFile, setIsAttachFile] = useState(false);
@@ -128,7 +131,6 @@ export default function Chat() {
         snapshot.forEach(doc => {
           messagesArray.push({
             _id: doc.val()._id,
-            createdAt: new Date(doc.val().createdAt), // Ensure createdAt is converted to Date object if it's a timestamp
             text: doc.val().text,
             user: doc.val().user,
             image: doc.val().imagePath,
@@ -251,133 +253,7 @@ export default function Chat() {
     }
   };
 
-  const renderBubble = props => {
-    const {currentMessage} = props;
-    console.log('Current: ', currentMessage);
-    if (currentMessage.file) {
-      return (
-        <TouchableOpacity
-          style={{
-            width: '50%',
-            height: '50%',
-            backgroundColor:
-              props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
-            borderBottomLeftRadius:
-              props.currentMessage.user._id === 2 ? 15 : 5,
-            borderBottomRightRadius:
-              props.currentMessage.user._id === 2 ? 5 : 15,
-          }}
-          onPress={() => navigation.navigate('View', {currentMessage})}>
-          <InChatFileTransfer
-            style={{marginTop: -10}}
-            filePath={currentMessage.file}
-          />
-          {/* <InChatViewFile
-            props={props}
-            visible={fileVisible}
-            onClose={() => setFileVisible(false)}
-          /> */}
-          <View style={{flexDirection: 'column'}}>
-            <Text
-              style={{
-                width: '50%',
-                height: '50%',
-                color: currentMessage.user._id === 2 ? 'white' : 'black',
-              }}>
-              {currentMessage.text}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    } else if (currentMessage.audio) {
-      return (
-        <TouchableOpacity
-          style={{
-            width: '50%',
-            height: '50%',
-            backgroundColor:
-              props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
-            borderBottomLeftRadius:
-              props.currentMessage.user._id === 2 ? 15 : 5,
-            borderBottomRightRadius:
-              props.currentMessage.user._id === 2 ? 5 : 15,
-          }}
-          onPress={() => navigation.navigate('View', {currentMessage})}>
-          <InChatFileTransfer
-            style={{marginTop: -10}}
-            filePath={currentMessage.audio}
-          />
-          {/* <InChatViewFile
-            props={props}
-            visible={fileVisible}
-            onClose={() => setFileVisible(false)}
-          /> */}
-          <View style={{flexDirection: 'column'}}>
-            <Text
-              style={{
-                width: '50%',
-                height: '50%',
-                color: currentMessage.user._id === 2 ? 'white' : 'black',
-              }}>
-              {currentMessage.text}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    } else if (currentMessage.video) {
-      return (
-        <TouchableOpacity
-          style={{
-            width: '50%',
-            height: '50%',
-            backgroundColor:
-              props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
-            borderBottomLeftRadius:
-              props.currentMessage.user._id === 2 ? 15 : 5,
-            borderBottomRightRadius:
-              props.currentMessage.user._id === 2 ? 5 : 15,
-          }}
-          onPress={() => navigation.navigate('View', {currentMessage})}>
-          <InChatFileTransfer
-            style={{marginTop: -10}}
-            filePath={currentMessage.video}
-          />
-          {/* <InChatViewFile
-            props={props}
-            visible={fileVisible}
-            onClose={() => setFileVisible(false)}
-          /> */}
-          <View style={{flexDirection: 'column'}}>
-            <Text
-              style={{
-                width: '50%',
-                height: '50%',
-                color: currentMessage.user._id === 2 ? 'white' : 'black',
-              }}>
-              {currentMessage.text}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <Bubble
-        {...props}
-        wrapperStyle={{
-          right: {
-            backgroundColor: '#DEF9C4',
-          },
-        }}
-        textStyle={{
-          right: {
-            color: 'black',
-          },
-        }}
-      />
-    );
-  };
-
+  // SEND ICONS/DOCUMENTS ICONS FUNCTION
   const renderSend = props => {
     return (
       <View style={{flexDirection: 'row'}}>
@@ -413,11 +289,11 @@ export default function Chat() {
     );
   };
 
-  // add a function to view your file picked before click send it
+  // ADD FUNCTION TO VIEW FILE BEFORE SENDING IT
   const renderChatFooter = useCallback(() => {
     if (imagePath) {
       return (
-        <View style={{backgroundColor: 'yellow'}}>
+        <View style={{backgroundColor: 'white'}}>
           <Image source={{uri: imagePath}} style={{height: 75, width: 75}} />
           <TouchableOpacity
             onPress={() => setImagePath('')}
@@ -432,8 +308,8 @@ export default function Chat() {
     }
     if (filePath) {
       return (
-        <View style={{backgroundColor: 'yellow'}}>
-          <View style={{paddingVertical: 50, marginBottom: 20}}>
+        <View style={{backgroundColor: 'white'}}>
+          <View style={{marginBottom: 65, padding: 0}}>
             <InChatFileTransfer filePath={filePath} />
           </View>
           <TouchableOpacity
@@ -453,8 +329,8 @@ export default function Chat() {
       );
     } else if (audioPath) {
       return (
-        <View style={{backgroundColor: 'yellow'}}>
-          <View style={{paddingVertical: 50, marginBottom: 20}}>
+        <View style={{backgroundColor: 'white'}}>
+          <View style={{marginBottom: 65, padding: 0}}>
             <InChatFileTransfer filePath={audioPath} />
           </View>
           <TouchableOpacity
@@ -474,8 +350,8 @@ export default function Chat() {
       );
     } else if (videoPath) {
       return (
-        <View style={{backgroundColor: 'yellow'}}>
-          <View style={{paddingVertical: 50, marginBottom: 20}}>
+        <View style={{backgroundColor: 'white'}}>
+          <View style={{marginBottom: 65, padding: 0}}>
             <InChatFileTransfer filePath={videoPath} />
           </View>
           <TouchableOpacity
@@ -497,15 +373,16 @@ export default function Chat() {
     return null;
   }, [filePath, imagePath, audioPath, videoPath]);
 
+  // ADDING CHATS TO DATABASE
   const onSend = useCallback(
     (messages = []) => {
       console.log('Message: ', messages);
       const [messageToSend] = messages;
+      console.log(messageToSend);
       if (isAttachImage) {
         const newMessage = {
           _id: messages[0]._id + 1,
           text: messageToSend.text,
-          createdAt: new Date(),
           user: {
             _id: 2,
             avatar: '',
@@ -519,8 +396,7 @@ export default function Chat() {
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, newMessage),
         );
-        const {_id, createdAt, text, user} = messages[0];
-
+        const {_id, text, user, createdAt} = messages[0];
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
           user: user,
@@ -535,7 +411,6 @@ export default function Chat() {
         const newMessage = {
           _id: messages[0]._id + 1,
           text: messageToSend.text,
-          createdAt: new Date(),
           user: {
             _id: 2,
             avatar: '',
@@ -550,7 +425,7 @@ export default function Chat() {
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, newMessage),
         );
-        const {_id, createdAt, text, user} = messages[0];
+        const {_id, text, user} = messages[0];
 
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
@@ -566,7 +441,6 @@ export default function Chat() {
         const newMessage = {
           _id: messages[0]._id + 1,
           text: messageToSend.text,
-          createdAt: new Date(),
           user: {
             _id: 2,
             avatar: '',
@@ -581,7 +455,7 @@ export default function Chat() {
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, newMessage),
         );
-        const {_id, createdAt, text, user} = messages[0];
+        const {_id, text, user} = messages[0];
 
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
@@ -597,7 +471,6 @@ export default function Chat() {
         const newMessage = {
           _id: messages[0]._id + 1,
           text: messageToSend.text,
-          createdAt: new Date(),
           user: {
             _id: 2,
             avatar: '',
@@ -612,7 +485,7 @@ export default function Chat() {
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, newMessage),
         );
-        const {_id, createdAt, text, user} = messages[0];
+        const {_id, text, user} = messages[0];
 
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
@@ -630,7 +503,7 @@ export default function Chat() {
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, messages),
         );
-        const {_id, createdAt, text, user} = messages[0];
+        const {_id, text, user} = messages[0];
 
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
@@ -653,6 +526,73 @@ export default function Chat() {
     ],
   );
 
+  const renderMessageAudio = props => {
+    const {currentMessage} = props;
+
+    if (!currentMessage || !currentMessage.audio) {
+      return null;
+    }
+
+    const playAudio = () => {
+      if (!isPlaying) {
+        SoundPlayer.playUrl(currentMessage.audio);
+        setIsPlaying(true);
+      }
+    };
+
+    const pauseAudio = () => {
+      if (isPlaying) {
+        SoundPlayer.stop();
+        setIsPlaying(false);
+      }
+    };
+
+    return (
+      <View
+        style={{
+          borderRadius: 15,
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          margin: 5,
+          padding: 10,
+        }}>
+        <TouchableOpacity onPress={isPlaying ? pauseAudio : playAudio}>
+          <Text style={{color: 'black'}}>
+            {isPlaying ? 'Pause Audio' : 'Play Audio'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderMessageVideo = props => {
+    const {currentMessage} = props;
+
+    if (!currentMessage || !currentMessage.video) {
+      return null;
+    }
+
+    return (
+      <View
+        style={{
+          borderRadius: 15,
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          margin: 5,
+        }}>
+        <Video
+          source={{uri: currentMessage.video}}
+          style={{width: 200, height: 140}}
+          controls={true}
+          // resizeMode="cover"
+
+          resizeMode="stretch"
+        />
+      </View>
+    );
+  };
+
+  // SHOW THE ACTION SHEET
   const handleAttachmentPress = () => {
     actionSheetRef.current?.show();
   };
@@ -664,10 +604,22 @@ export default function Chat() {
         style={{flex: 1}}>
         <GiftedChat
           alwaysShowSend
+          renderMessageVideo={renderMessageVideo}
+          renderMessageAudio={renderMessageAudio}
           renderSend={renderSend}
+          renderBubble={props => {
+            return (
+              <Bubble
+                {...props}
+                wrapperStyle={{
+                  right: {backgroundColor: 'lightgreen'},
+                }}
+                textStyle={{right: {color: 'black'}}}
+              />
+            );
+          }}
           scrollToBottom
           scrollToBottomComponent={scrollToBottomComponent}
-          renderBubble={renderBubble}
           messages={messages}
           showAvatarForEveryMessage={false}
           showUserAvatar={false}
