@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   TouchableOpacity,
   View,
@@ -7,6 +7,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import {GiftedChat, Bubble, Send} from 'react-native-gifted-chat';
+import ActionSheet from 'react-native-actions-sheet';
 // import {
 //   collection,
 //   addDoc,
@@ -23,15 +24,21 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import * as DocumentPicker from 'react-native-document-picker';
 import database from '@react-native-firebase/database';
 import {getDatabase, set, ref} from 'firebase/database';
+import Video from 'react-native-video';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [isAttachImage, setIsAttachImage] = useState(false);
   const [isAttachFile, setIsAttachFile] = useState(false);
+  const [isAttachAudio, setIsAttachAudio] = useState(false);
+  const [isAttachVideo, setIsAttachVideo] = useState(false);
   const [imagePath, setImagePath] = useState('');
   const [filePath, setFilePath] = useState('');
+  const [audioPath, setAudioPath] = useState('');
+  const [videoPath, setVideoPath] = useState('');
   const [users, setUsers] = useState([]);
   const [logUser, setLogUser] = useState([]);
+  const actionSheetRef = useRef(null);
 
   const navigation = useNavigation();
 
@@ -126,6 +133,8 @@ export default function Chat() {
             user: doc.val().user,
             image: doc.val().imagePath,
             file: doc.val().filePath,
+            audio: doc.val().audioPath,
+            video: doc.val().videoPath,
           });
         });
         setMessages(messagesArray);
@@ -142,26 +151,96 @@ export default function Chat() {
     return <Icon name="angle-double-down" size={22} color="#333" />;
   };
 
-  const _pickDocument = async () => {
+  const pickImageDocument = async () => {
     try {
       const result = await DocumentPicker.pick({
-        type: [DocumentPicker.types.allFiles],
+        type: [DocumentPicker.types.images],
         copyTo: 'documentDirectory',
         mode: 'import',
-        allowMultiSelection: true,
+        allowMultiSelection: false,
       });
       const fileUri = result[0].fileCopyUri;
       if (!fileUri) {
         console.log('File URI is undefined or null');
         return;
       }
-      if (fileUri.indexOf('.png') !== -1 || fileUri.indexOf('.jpg') !== -1) {
-        setImagePath(fileUri);
-        setIsAttachImage(true);
+      setImagePath(fileUri);
+      setIsAttachImage(true);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancelled file picker');
       } else {
-        setFilePath(fileUri);
-        setIsAttachFile(true);
+        console.log('DocumentPicker err => ', err);
+        throw err;
       }
+    }
+  };
+
+  const pickFileDocument = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+        copyTo: 'documentDirectory',
+        mode: 'import',
+        allowMultiSelection: false,
+      });
+      const fileUri = result[0].fileCopyUri;
+      if (!fileUri) {
+        console.log('File URI is undefined or null');
+        return;
+      }
+      setFilePath(fileUri);
+      setIsAttachFile(true);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancelled file picker');
+      } else {
+        console.log('DocumentPicker err => ', err);
+        throw err;
+      }
+    }
+  };
+
+  const pickAudioDocument = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.audio],
+        copyTo: 'documentDirectory',
+        mode: 'import',
+        allowMultiSelection: false,
+      });
+      const fileUri = result[0].fileCopyUri;
+      if (!fileUri) {
+        console.log('File URI is undefined or null');
+        return;
+      }
+      setAudioPath(fileUri);
+      setIsAttachAudio(true);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancelled file picker');
+      } else {
+        console.log('DocumentPicker err => ', err);
+        throw err;
+      }
+    }
+  };
+
+  const pickVideoDocument = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.video],
+        copyTo: 'documentDirectory',
+        mode: 'import',
+        allowMultiSelection: false,
+      });
+      const fileUri = result[0].fileCopyUri;
+      if (!fileUri) {
+        console.log('File URI is undefined or null');
+        return;
+      }
+      setVideoPath(fileUri);
+      setIsAttachVideo(true);
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         console.log('User cancelled file picker');
@@ -174,7 +253,8 @@ export default function Chat() {
 
   const renderBubble = props => {
     const {currentMessage} = props;
-    if (currentMessage.file && currentMessage.file) {
+    console.log('Current: ', currentMessage);
+    if (currentMessage.file) {
       return (
         <TouchableOpacity
           style={{
@@ -209,7 +289,78 @@ export default function Chat() {
           </View>
         </TouchableOpacity>
       );
+    } else if (currentMessage.audio) {
+      return (
+        <TouchableOpacity
+          style={{
+            width: '50%',
+            height: '50%',
+            backgroundColor:
+              props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
+            borderBottomLeftRadius:
+              props.currentMessage.user._id === 2 ? 15 : 5,
+            borderBottomRightRadius:
+              props.currentMessage.user._id === 2 ? 5 : 15,
+          }}
+          onPress={() => navigation.navigate('View', {currentMessage})}>
+          <InChatFileTransfer
+            style={{marginTop: -10}}
+            filePath={currentMessage.audio}
+          />
+          {/* <InChatViewFile
+            props={props}
+            visible={fileVisible}
+            onClose={() => setFileVisible(false)}
+          /> */}
+          <View style={{flexDirection: 'column'}}>
+            <Text
+              style={{
+                width: '50%',
+                height: '50%',
+                color: currentMessage.user._id === 2 ? 'white' : 'black',
+              }}>
+              {currentMessage.text}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    } else if (currentMessage.video) {
+      return (
+        <TouchableOpacity
+          style={{
+            width: '50%',
+            height: '50%',
+            backgroundColor:
+              props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
+            borderBottomLeftRadius:
+              props.currentMessage.user._id === 2 ? 15 : 5,
+            borderBottomRightRadius:
+              props.currentMessage.user._id === 2 ? 5 : 15,
+          }}
+          onPress={() => navigation.navigate('View', {currentMessage})}>
+          <InChatFileTransfer
+            style={{marginTop: -10}}
+            filePath={currentMessage.video}
+          />
+          {/* <InChatViewFile
+            props={props}
+            visible={fileVisible}
+            onClose={() => setFileVisible(false)}
+          /> */}
+          <View style={{flexDirection: 'column'}}>
+            <Text
+              style={{
+                width: '50%',
+                height: '50%',
+                color: currentMessage.user._id === 2 ? 'white' : 'black',
+              }}>
+              {currentMessage.text}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
     }
+
     return (
       <Bubble
         {...props}
@@ -230,7 +381,7 @@ export default function Chat() {
   const renderSend = props => {
     return (
       <View style={{flexDirection: 'row'}}>
-        <TouchableOpacity onPress={_pickDocument}>
+        <TouchableOpacity onPress={handleAttachmentPress}>
           <Icon
             name="paperclip"
             style={{
@@ -286,7 +437,54 @@ export default function Chat() {
             <InChatFileTransfer filePath={filePath} />
           </View>
           <TouchableOpacity
-            onPress={() => setFilePath('')}
+            onPress={() => {
+              setFilePath('');
+              setAudioPath('');
+              setImagePath('');
+              setVideoPath('');
+            }}
+            style={{backgroundColor: 'white', justifyContent: 'center'}}>
+            <Text
+              style={{color: 'black', padding: 10, backgroundColor: 'grey'}}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    } else if (audioPath) {
+      return (
+        <View style={{backgroundColor: 'yellow'}}>
+          <View style={{paddingVertical: 50, marginBottom: 20}}>
+            <InChatFileTransfer filePath={audioPath} />
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setFilePath('');
+              setAudioPath('');
+              setImagePath('');
+              setVideoPath('');
+            }}
+            style={{backgroundColor: 'white', justifyContent: 'center'}}>
+            <Text
+              style={{color: 'black', padding: 10, backgroundColor: 'grey'}}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    } else if (videoPath) {
+      return (
+        <View style={{backgroundColor: 'yellow'}}>
+          <View style={{paddingVertical: 50, marginBottom: 20}}>
+            <InChatFileTransfer filePath={videoPath} />
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setFilePath('');
+              setAudioPath('');
+              setImagePath('');
+              setVideoPath('');
+            }}
             style={{backgroundColor: 'white', justifyContent: 'center'}}>
             <Text
               style={{color: 'black', padding: 10, backgroundColor: 'grey'}}>
@@ -297,7 +495,7 @@ export default function Chat() {
       );
     }
     return null;
-  }, [filePath, imagePath]);
+  }, [filePath, imagePath, audioPath, videoPath]);
 
   const onSend = useCallback(
     (messages = []) => {
@@ -314,19 +512,15 @@ export default function Chat() {
           },
           image: imagePath,
           file: '',
+          audio: '',
+          video: '',
         };
         console.log('Document attached: ', newMessage);
         setMessages(previousMessages =>
           GiftedChat.append(previousMessages, newMessage),
         );
         const {_id, createdAt, text, user} = messages[0];
-        // addDoc(collection(database, 'chats'), {
-        //   _id,
-        //   createdAt,
-        //   text,
-        //   user,
-        //   imagePath,
-        // });
+
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
           user: user,
@@ -348,6 +542,8 @@ export default function Chat() {
           },
           image: '',
           file: filePath,
+          audio: '',
+          video: '',
         };
         console.log('Document attached: ', newMessage);
 
@@ -355,13 +551,7 @@ export default function Chat() {
           GiftedChat.append(previousMessages, newMessage),
         );
         const {_id, createdAt, text, user} = messages[0];
-        // addDoc(collection(database, 'chats'), {
-        //   _id,
-        //   createdAt,
-        //   text,
-        //   user,
-        //   filePath,
-        // });
+
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
           user: user,
@@ -372,6 +562,68 @@ export default function Chat() {
         });
         setFilePath('');
         setIsAttachFile(false);
+      } else if (isAttachAudio) {
+        const newMessage = {
+          _id: messages[0]._id + 1,
+          text: messageToSend.text,
+          createdAt: new Date(),
+          user: {
+            _id: 2,
+            avatar: '',
+          },
+          image: '',
+          audio: audioPath,
+          file: '',
+          video: '',
+        };
+        console.log('Document attached: ', newMessage);
+
+        setMessages(previousMessages =>
+          GiftedChat.append(previousMessages, newMessage),
+        );
+        const {_id, createdAt, text, user} = messages[0];
+
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+          audioPath: audioPath,
+        }).then(() => {
+          console.log('Chat added!');
+        });
+        setAudioPath('');
+        setIsAttachAudio(false);
+      } else if (isAttachVideo) {
+        const newMessage = {
+          _id: messages[0]._id + 1,
+          text: messageToSend.text,
+          createdAt: new Date(),
+          user: {
+            _id: 2,
+            avatar: '',
+          },
+          image: '',
+          video: videoPath,
+          audio: '',
+          file: '',
+        };
+        console.log('Document attached: ', newMessage);
+
+        setMessages(previousMessages =>
+          GiftedChat.append(previousMessages, newMessage),
+        );
+        const {_id, createdAt, text, user} = messages[0];
+
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+          videoPath: videoPath,
+        }).then(() => {
+          console.log('Chat added!');
+        });
+        setVideoPath('');
+        setIsAttachVideo(false);
       } else {
         console.log('Text attached:', messages);
 
@@ -379,12 +631,7 @@ export default function Chat() {
           GiftedChat.append(previousMessages, messages),
         );
         const {_id, createdAt, text, user} = messages[0];
-        // addDoc(collection(database, 'chats'), {
-        //   _id,
-        //   createdAt,
-        //   text,
-        //   user,
-        // });
+
         set(ref(getDatabase(), 'chats/' + _id), {
           text: text,
           user: user,
@@ -393,36 +640,25 @@ export default function Chat() {
           console.log('Chat added!');
         });
       }
-      // setMessages([...messages, ...messages]);
     },
-    [filePath, imagePath, isAttachFile, isAttachImage],
+    [
+      filePath,
+      imagePath,
+      isAttachFile,
+      isAttachImage,
+      audioPath,
+      isAttachAudio,
+      isAttachVideo,
+      videoPath,
+    ],
   );
+
+  const handleAttachmentPress = () => {
+    actionSheetRef.current?.show();
+  };
 
   return (
     <>
-      {/* {messages.map(message => (
-        <>
-          <Text style={{color: 'black'}} key={message._id}>
-            {message.text}
-          </Text>
-          {message.imagePath ? (
-            <Image
-              style={{
-                width: 50,
-                height: 50,
-              }}
-              source={{uri: message.imagePath}}
-            />
-          ) : null}
-        </>
-      ))} */}
-      {/* <View style={{padding: 10}}>
-        <Text style={{color: 'black'}}>User Status: {users.status}</Text>
-        <Text style={{color: 'black'}}>User Last Login: {users.lastLogin}</Text>
-        <Text style={{color: 'black'}}>
-          Status of My Login: {logUser.status}
-        </Text>
-      </View> */}
       <ImageBackground
         source={require('../assets/pattern.png')}
         style={{flex: 1}}>
@@ -449,6 +685,68 @@ export default function Chat() {
               'https://imgs.search.brave.com/pZ2DKWjtw7hzsB-caM9l5n5xAr6aaH4tXxJAIMSHK5s/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzA0Lzk4LzcyLzQz/LzM2MF9GXzQ5ODcy/NDMyM19Gb25BeThM/WVlmRDFCVUMwYmNL/NTZhb1l3dUxISjJH/ZS5qcGc',
           }}
         />
+        <ActionSheet
+          containerStyle={{backgroundColor: '#2F3645'}}
+          ref={actionSheetRef}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+              marginTop: 20,
+            }}>
+            <TouchableOpacity onPress={pickFileDocument}>
+              <View
+                style={{
+                  backgroundColor: '#36C2CE',
+                  borderRadius: 10,
+                  padding: 10,
+                }}>
+                <Icon name="file" size={30} color="white" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={pickImageDocument}>
+              <View
+                style={{
+                  backgroundColor: '#FF4191',
+                  borderRadius: 10,
+                  padding: 10,
+                }}>
+                <Icon name="image" size={30} color="white" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={pickVideoDocument}>
+              <View
+                style={{
+                  backgroundColor: '#FFF455',
+                  borderRadius: 10,
+                  padding: 10,
+                }}>
+                <Icon name="video" size={30} color="white" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={pickAudioDocument}>
+              <View
+                style={{
+                  backgroundColor: '#667BC6',
+                  borderRadius: 10,
+                  padding: 10,
+                }}>
+                <Icon name="file-audio" size={30} color="white" />
+              </View>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={() => actionSheetRef.current?.hide()}
+            style={{
+              height: 100,
+              width: '10%',
+              justifyContent: 'center',
+              alignItems: 'center',
+              alignSelf: 'center',
+            }}>
+            <Text style={{color: 'white', fontWeight: 'bold'}}>X</Text>
+          </TouchableOpacity>
+        </ActionSheet>
       </ImageBackground>
     </>
   );

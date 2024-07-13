@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {View, TouchableOpacity, StyleSheet, Text} from 'react-native';
 import Pdf from 'react-native-pdf';
 import Video from 'react-native-video';
@@ -6,21 +6,33 @@ import SoundPlayer from 'react-native-sound-player';
 
 function InChatViewFile({route, navigation}) {
   const currentMessage = route.params.currentMessage;
-  const fileExtension = currentMessage.file.split('.').pop().toLowerCase();
+  const filePath =
+    currentMessage.file || currentMessage.audio || currentMessage.video;
+  const fileExtension = filePath ? filePath.split('.').pop().toLowerCase() : '';
+
+  useEffect(() => {
+    if (fileExtension === 'mp3' || fileExtension === 'wav') {
+      SoundPlayer.playUrl(filePath);
+    }
+
+    return () => {
+      SoundPlayer.stop();
+    };
+  }, [filePath, fileExtension]);
 
   const renderFile = () => {
     switch (fileExtension) {
       case 'pdf':
-        return <Pdf source={{uri: currentMessage.file}} style={styles.pdf} />;
+        return <Pdf source={{uri: filePath}} style={styles.pdf} />;
       case 'mp3':
       case 'wav':
-        return SoundPlayer.playUrl(currentMessage.file);
+        return <Text style={styles.audioPlayingText}>Playing Audio...</Text>;
       case 'mp4':
       case 'mov':
       case 'avi':
         return (
           <Video
-            source={{uri: currentMessage.file}}
+            source={{uri: filePath}}
             controls={true}
             style={styles.media}
           />
@@ -32,7 +44,7 @@ function InChatViewFile({route, navigation}) {
 
   return (
     <View style={styles.container}>
-      {renderFile()}
+      {filePath ? renderFile() : <Text>No file to display</Text>}
       <TouchableOpacity
         onPress={() => {
           navigation.navigate('Chat');
@@ -61,6 +73,11 @@ const styles = StyleSheet.create({
   media: {
     flex: 1,
     width: '100%',
+  },
+  audioPlayingText: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 20,
   },
   buttonCancel: {
     width: 35,
