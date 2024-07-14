@@ -26,10 +26,9 @@ import * as DocumentPicker from 'react-native-document-picker';
 import database from '@react-native-firebase/database';
 import {getDatabase, set, ref} from 'firebase/database';
 import Video from 'react-native-video';
-
+import Slider from '@react-native-community/slider';
 export default function Chat() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [sound, setSound] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isAttachImage, setIsAttachImage] = useState(false);
   const [isAttachFile, setIsAttachFile] = useState(false);
@@ -41,9 +40,45 @@ export default function Chat() {
   const [videoPath, setVideoPath] = useState('');
   const [users, setUsers] = useState([]);
   const [logUser, setLogUser] = useState([]);
+  const [currentPosition, setCurrentPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
   const actionSheetRef = useRef(null);
 
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const onFinishedPlayingSubscription = SoundPlayer.addEventListener(
+      'FinishedPlaying',
+      () => {
+        setIsPlaying(false);
+        setCurrentPosition(0);
+      },
+    );
+
+    const onFinishedLoadingSubscription = SoundPlayer.addEventListener(
+      'FinishedLoading',
+      ({success}) => {
+        if (success) {
+          SoundPlayer.getInfo().then(info => {
+            setDuration(info.duration);
+          });
+        }
+      },
+    );
+
+    const onProgressSubscription = SoundPlayer.addEventListener(
+      'Progress',
+      ({currentTime}) => {
+        setCurrentPosition(currentTime);
+      },
+    );
+
+    return () => {
+      onFinishedPlayingSubscription.remove();
+      onFinishedLoadingSubscription.remove();
+      onProgressSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const onSignOut = async () => {
@@ -137,6 +172,7 @@ export default function Chat() {
             file: doc.val().filePath,
             audio: doc.val().audioPath,
             video: doc.val().videoPath,
+            createdAt: doc.val().createdAt,
           });
         });
         setMessages(messagesArray);
@@ -378,7 +414,8 @@ export default function Chat() {
     (messages = []) => {
       console.log('Message: ', messages);
       const [messageToSend] = messages;
-      console.log(messageToSend);
+      const createdTime = new Date();
+      console.log('TIME: ', createdTime);
       if (isAttachImage) {
         const newMessage = {
           _id: messages[0]._id + 1,
@@ -391,6 +428,7 @@ export default function Chat() {
           file: '',
           audio: '',
           video: '',
+          createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
         setMessages(previousMessages =>
@@ -402,6 +440,7 @@ export default function Chat() {
           user: user,
           _id: _id,
           imagePath: imagePath,
+          createdAt: createdTime,
         }).then(() => {
           console.log('Chat added!');
         });
@@ -419,6 +458,7 @@ export default function Chat() {
           file: filePath,
           audio: '',
           video: '',
+          createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
 
@@ -432,6 +472,7 @@ export default function Chat() {
           user: user,
           _id: _id,
           filePath: filePath,
+          createdAt: createdTime,
         }).then(() => {
           console.log('Chat added!');
         });
@@ -449,6 +490,7 @@ export default function Chat() {
           audio: audioPath,
           file: '',
           video: '',
+          createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
 
@@ -462,6 +504,7 @@ export default function Chat() {
           user: user,
           _id: _id,
           audioPath: audioPath,
+          createdAt: createdTime,
         }).then(() => {
           console.log('Chat added!');
         });
@@ -479,6 +522,7 @@ export default function Chat() {
           video: videoPath,
           audio: '',
           file: '',
+          createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
 
@@ -492,6 +536,7 @@ export default function Chat() {
           user: user,
           _id: _id,
           videoPath: videoPath,
+          createdAt: createdTime,
         }).then(() => {
           console.log('Chat added!');
         });
@@ -509,6 +554,7 @@ export default function Chat() {
           text: text,
           user: user,
           _id: _id,
+          createdAt: createdTime,
         }).then(() => {
           console.log('Chat added!');
         });
@@ -542,10 +588,19 @@ export default function Chat() {
 
     const pauseAudio = () => {
       if (isPlaying) {
-        SoundPlayer.stop();
+        SoundPlayer.pause();
         setIsPlaying(false);
       }
     };
+
+    const seekAudio = value => {
+      SoundPlayer.seek(value);
+      setCurrentPosition(value);
+    };
+
+    if (!currentMessage || !currentMessage.audio) {
+      return null;
+    }
 
     return (
       <View
@@ -555,12 +610,30 @@ export default function Chat() {
           backgroundColor: 'white',
           margin: 5,
           padding: 10,
+          flexDirection: 'row',
         }}>
-        <TouchableOpacity onPress={isPlaying ? pauseAudio : playAudio}>
-          <Text style={{color: 'black'}}>
+        <Image
+          source={require('../assets/backImage.png')}
+          style={{height: 60, width: 60}}
+        />
+        <TouchableOpacity
+          style={{marginTop: '8%', marginLeft: 10}}
+          onPress={isPlaying ? pauseAudio : playAudio}>
+          {/* <Text style={{color: 'black'}}>
             {isPlaying ? 'Pause Audio' : 'Play Audio'}
-          </Text>
+          </Text> */}
+          <Icon color="black" size={20} name={isPlaying ? 'pause' : 'play'} />
         </TouchableOpacity>
+        <Slider
+          style={{width: '55%'}}
+          minimumValue={0}
+          maximumValue={duration}
+          value={currentPosition}
+          onSlidingComplete={seekAudio}
+          minimumTrackTintColor="#1EB1FC"
+          maximumTrackTintColor="#8ED1FC"
+          thumbTintColor="#1EB1FC"
+        />
       </View>
     );
   };
@@ -585,10 +658,41 @@ export default function Chat() {
           style={{width: 200, height: 140}}
           controls={true}
           // resizeMode="cover"
-
+          paused={true}
           resizeMode="stretch"
         />
       </View>
+    );
+  };
+
+  const renderMessageFile = props => {
+    const {currentMessage} = props;
+    if (!currentMessage || !currentMessage.file) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        style={{
+          width: '50%',
+          height: '50%',
+          backgroundColor:
+            props.currentMessage.user._id === 2 ? '#2e64e5' : '#efefef',
+          borderBottomLeftRadius: props.currentMessage.user._id === 2 ? 15 : 5,
+          borderBottomRightRadius: props.currentMessage.user._id === 2 ? 5 : 15,
+        }}
+        onPress={() => navigation.navigate('View', {currentMessage})}>
+        <InChatFileTransfer
+          style={{marginTop: -10}}
+          filePath={currentMessage.file}
+        />
+        {/* <InChatViewFile
+            props={props}
+            visible={fileVisible}
+            onClose={() => setFileVisible(false)}
+          /> */}
+        <View style={{flexDirection: 'column'}}>@@ -209,7 +289,78 @@</View>
+      </TouchableOpacity>
     );
   };
 
@@ -599,6 +703,13 @@ export default function Chat() {
 
   return (
     <>
+      <View style={{padding: 10}}>
+        <Text style={{color: 'black'}}>User Status: {users.status}</Text>
+        <Text style={{color: 'black'}}>User Last Login: {users.lastLogin}</Text>
+        <Text style={{color: 'black'}}>
+          Status of My Login: {logUser.status}
+        </Text>
+      </View>
       <ImageBackground
         source={require('../assets/pattern.png')}
         style={{flex: 1}}>
@@ -606,8 +717,34 @@ export default function Chat() {
           alwaysShowSend
           renderMessageVideo={renderMessageVideo}
           renderMessageAudio={renderMessageAudio}
+          renderMessageFile={renderMessageFile}
           renderSend={renderSend}
           renderBubble={props => {
+            const {currentMessage} = props;
+            if (currentMessage.file) {
+              return (
+                <TouchableOpacity
+                  style={{
+                    // width: '50%',
+                    // height: '50%',
+                    backgroundColor:
+                      props.currentMessage.user._id === 2
+                        ? 'white'
+                        : 'lightgreen',
+                    borderBottomLeftRadius:
+                      props.currentMessage.user._id === 2 ? 15 : 5,
+                    borderBottomRightRadius:
+                      props.currentMessage.user._id === 2 ? 5 : 15,
+                  }}
+                  onPress={() => navigation.navigate('View', {currentMessage})}>
+                  <InChatFileTransfer
+                    style={{marginTop: -10}}
+                    filePath={currentMessage.file}
+                  />
+                </TouchableOpacity>
+              );
+            }
+
             return (
               <Bubble
                 {...props}

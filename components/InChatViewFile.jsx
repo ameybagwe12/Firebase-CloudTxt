@@ -6,15 +6,10 @@ import SoundPlayer from 'react-native-sound-player';
 
 function InChatViewFile({route, navigation}) {
   const currentMessage = route.params.currentMessage;
-  const filePath =
-    currentMessage.file || currentMessage.audio || currentMessage.video;
+  const filePath = currentMessage.file;
   const fileExtension = filePath ? filePath.split('.').pop().toLowerCase() : '';
 
   useEffect(() => {
-    if (fileExtension === 'mp3' || fileExtension === 'wav') {
-      SoundPlayer.playUrl(filePath);
-    }
-
     return () => {
       SoundPlayer.stop();
     };
@@ -24,19 +19,7 @@ function InChatViewFile({route, navigation}) {
     switch (fileExtension) {
       case 'pdf':
         return <Pdf source={{uri: filePath}} style={styles.pdf} />;
-      case 'mp3':
-      case 'wav':
-        return <Text style={styles.audioPlayingText}>Playing Audio...</Text>;
-      case 'mp4':
-      case 'mov':
-      case 'avi':
-        return (
-          <Video
-            source={{uri: filePath}}
-            controls={true}
-            style={styles.media}
-          />
-        );
+
       default:
         return <Text>Unsupported file type</Text>;
     }
@@ -48,7 +31,6 @@ function InChatViewFile({route, navigation}) {
       <TouchableOpacity
         onPress={() => {
           navigation.navigate('Chat');
-          SoundPlayer.stop();
         }}
         style={styles.buttonCancel}>
         <Text style={styles.textBtn}>X</Text>
