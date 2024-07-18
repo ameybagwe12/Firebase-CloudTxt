@@ -14,6 +14,7 @@ import {
 import database from '@react-native-firebase/database';
 import {signInWithEmailAndPassword} from 'firebase/auth';
 import {auth} from '../config/firebase';
+import GooglePlacesInput from './GooglePlacesInput';
 const backImage = require('../assets/backImage.png');
 
 export default function Login({navigation}) {
@@ -72,9 +73,9 @@ export default function Login({navigation}) {
           onChangeText={text => setPassword(text)}
           placeholderTextColor={'black'}
         />
+        <GooglePlacesInput />
         <TouchableOpacity style={styles.button} onPress={onHandleLogin}>
           <Text style={{fontWeight: 'bold', color: '#fff', fontSize: 18}}>
-            {' '}
             Log In
           </Text>
         </TouchableOpacity>

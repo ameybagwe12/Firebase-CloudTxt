@@ -8,14 +8,7 @@ import {
 } from 'react-native';
 import {GiftedChat, Bubble, Send} from 'react-native-gifted-chat';
 import ActionSheet from 'react-native-actions-sheet';
-// import {
-//   collection,
-//   addDoc,
-//   orderBy,
-//   query,
-//   onSnapshot,
-// } from 'firebase/firestore';
-// import InChatViewFile from '../components/InChatViewFile';
+import GetLocation from 'react-native-get-location';
 import SoundPlayer from 'react-native-sound-player';
 import InChatFileTransfer from '../components/InChatFileTransfer';
 import {signOut} from 'firebase/auth';
@@ -30,6 +23,8 @@ import Slider from '@react-native-community/slider';
 export default function Chat() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [location, setLocation] = useState({latitude: null, longitude: null});
+
   const [isAttachImage, setIsAttachImage] = useState(false);
   const [isAttachFile, setIsAttachFile] = useState(false);
   const [isAttachAudio, setIsAttachAudio] = useState(false);
@@ -38,6 +33,8 @@ export default function Chat() {
   const [filePath, setFilePath] = useState('');
   const [audioPath, setAudioPath] = useState('');
   const [videoPath, setVideoPath] = useState('');
+  const [isLocation, setIsLocation] = useState(false);
+
   const [users, setUsers] = useState([]);
   const [logUser, setLogUser] = useState([]);
   const [currentPosition, setCurrentPosition] = useState(0);
@@ -179,17 +176,59 @@ export default function Chat() {
       });
   }, []);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      console.log('messages: ', messages);
-    }
-  }, [messages]);
+  // useEffect(() => {
+  //   if (messages.length > 0) {
+  //     console.log('messages: ', messages);
+  //   }
+  // }, [messages]);
 
   const scrollToBottomComponent = () => {
     return <Icon name="angle-double-down" size={22} color="#333" />;
   };
 
+  // const LOCATION_FETCH_INTERVAL = 3000; // Fetch location every 5 seconds (can be adjusted)
+
+  useEffect(() => {
+    // let intervalId;
+
+    async function startLocationFetching() {
+      await pickLocation(); // Initial fetch
+
+      // intervalId = setInterval(async () => {
+      //   await pickLocation();
+      // }, LOCATION_FETCH_INTERVAL);
+    }
+
+    startLocationFetching();
+
+    // return () => {
+    //   clearInterval(intervalId);
+    // };
+  }, []);
+
+  async function pickLocation() {
+    actionSheetRef.current?.hide();
+    GetLocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 60000,
+    })
+      .then(location => {
+        setLocation({
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+        setIsLocation(true); // Location loaded, enable interaction
+        console.log(location.latitude, location.longitude);
+      })
+      .catch(error => {
+        const {code, message} = error;
+        console.warn(code, message);
+        setIsLocation(false); // Location not loaded, disable interaction
+      });
+  }
+
   const pickImageDocument = async () => {
+    actionSheetRef.current?.hide();
     try {
       const result = await DocumentPicker.pick({
         type: [DocumentPicker.types.images],
@@ -215,6 +254,7 @@ export default function Chat() {
   };
 
   const pickFileDocument = async () => {
+    actionSheetRef.current?.hide();
     try {
       const result = await DocumentPicker.pick({
         type: [DocumentPicker.types.allFiles],
@@ -240,6 +280,7 @@ export default function Chat() {
   };
 
   const pickAudioDocument = async () => {
+    actionSheetRef.current?.hide();
     try {
       const result = await DocumentPicker.pick({
         type: [DocumentPicker.types.audio],
@@ -265,6 +306,7 @@ export default function Chat() {
   };
 
   const pickVideoDocument = async () => {
+    actionSheetRef.current?.hide();
     try {
       const result = await DocumentPicker.pick({
         type: [DocumentPicker.types.video],
@@ -327,12 +369,19 @@ export default function Chat() {
 
   // ADD FUNCTION TO VIEW FILE BEFORE SENDING IT
   const renderChatFooter = useCallback(() => {
+    console.log('Is loc: ', isLocation);
     if (imagePath) {
       return (
         <View style={{backgroundColor: 'white'}}>
           <Image source={{uri: imagePath}} style={{height: 75, width: 75}} />
           <TouchableOpacity
-            onPress={() => setImagePath('')}
+            onPress={() => {
+              setFilePath('');
+              setAudioPath('');
+              setImagePath('');
+              setVideoPath('');
+              isLocation('');
+            }}
             style={{backgroundColor: 'white', justifyContent: 'center'}}>
             <Text
               style={{color: 'black', padding: 10, backgroundColor: 'grey'}}>
@@ -341,8 +390,7 @@ export default function Chat() {
           </TouchableOpacity>
         </View>
       );
-    }
-    if (filePath) {
+    } else if (filePath) {
       return (
         <View style={{backgroundColor: 'white'}}>
           <View style={{marginBottom: 65, padding: 0}}>
@@ -354,6 +402,7 @@ export default function Chat() {
               setAudioPath('');
               setImagePath('');
               setVideoPath('');
+              isLocation('');
             }}
             style={{backgroundColor: 'white', justifyContent: 'center'}}>
             <Text
@@ -375,6 +424,7 @@ export default function Chat() {
               setAudioPath('');
               setImagePath('');
               setVideoPath('');
+              isLocation('');
             }}
             style={{backgroundColor: 'white', justifyContent: 'center'}}>
             <Text
@@ -396,6 +446,7 @@ export default function Chat() {
               setAudioPath('');
               setImagePath('');
               setVideoPath('');
+              isLocation('');
             }}
             style={{backgroundColor: 'white', justifyContent: 'center'}}>
             <Text
@@ -405,10 +456,32 @@ export default function Chat() {
           </TouchableOpacity>
         </View>
       );
+    } else if (isLocation) {
+      // ADD UI TO VIEW LOCATION COORDS
+      <View style={{backgroundColor: 'black'}}>
+        <View style={{padding: 0}}>
+          <Text style={{color: 'black'}}> Latitude: {location.latitude}</Text>
+          <Text style={{color: 'black'}}>Longitude: {location.longitude}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            setFilePath('');
+            setAudioPath('');
+            setImagePath('');
+            setVideoPath('');
+            isLocation('');
+          }}
+          style={{backgroundColor: 'white', justifyContent: 'center'}}>
+          <Text style={{color: 'black', padding: 10, backgroundColor: 'grey'}}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+      </View>;
     }
     return null;
-  }, [filePath, imagePath, audioPath, videoPath]);
+  }, [filePath, imagePath, audioPath, videoPath, location]);
 
+  console.log(isLocation);
   // ADDING CHATS TO DATABASE
   const onSend = useCallback(
     (messages = []) => {
@@ -428,6 +501,7 @@ export default function Chat() {
           file: '',
           audio: '',
           video: '',
+          location: '',
           createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
@@ -458,6 +532,7 @@ export default function Chat() {
           file: filePath,
           audio: '',
           video: '',
+          location: '',
           createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
@@ -490,6 +565,7 @@ export default function Chat() {
           audio: audioPath,
           file: '',
           video: '',
+          location: '',
           createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
@@ -522,6 +598,7 @@ export default function Chat() {
           video: videoPath,
           audio: '',
           file: '',
+          location: '',
           createdAt: createdTime,
         };
         console.log('Document attached: ', newMessage);
@@ -542,6 +619,39 @@ export default function Chat() {
         });
         setVideoPath('');
         setIsAttachVideo(false);
+      } else if (isLocation) {
+        const newMessage = {
+          _id: messages[0]._id + 1,
+          text: messageToSend.text,
+          user: {
+            _id: 2,
+            avatar: '',
+          },
+          image: '',
+          video: '',
+          audio: '',
+          file: '',
+          location: location,
+          createdAt: createdTime,
+        };
+        console.log('Document attached: ', newMessage);
+
+        setMessages(previousMessages =>
+          GiftedChat.append(previousMessages, newMessage),
+        );
+        const {_id, text, user} = messages[0];
+
+        set(ref(getDatabase(), 'chats/' + _id), {
+          text: text,
+          user: user,
+          _id: _id,
+          location: location,
+          createdAt: createdTime,
+        }).then(() => {
+          console.log('Chat added!');
+        });
+        setLocation({longitude: null, latitude: null});
+        setIsLocation(false);
       } else {
         console.log('Text attached:', messages);
 
@@ -569,6 +679,7 @@ export default function Chat() {
       isAttachAudio,
       isAttachVideo,
       videoPath,
+      isLocation,
     ],
   );
 
@@ -743,6 +854,8 @@ export default function Chat() {
                   />
                 </TouchableOpacity>
               );
+            } else if (currentMessage.location) {
+              <Text style={{color: 'black'}}>Location</Text>;
             }
 
             return (
@@ -779,50 +892,79 @@ export default function Chat() {
           ref={actionSheetRef}>
           <View
             style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
+              // flexDirection: 'row',
               marginTop: 20,
             }}>
-            <TouchableOpacity onPress={pickFileDocument}>
-              <View
-                style={{
-                  backgroundColor: '#36C2CE',
-                  borderRadius: 10,
-                  padding: 10,
-                }}>
-                <Icon name="file" size={30} color="white" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={pickImageDocument}>
-              <View
-                style={{
-                  backgroundColor: '#FF4191',
-                  borderRadius: 10,
-                  padding: 10,
-                }}>
-                <Icon name="image" size={30} color="white" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={pickVideoDocument}>
-              <View
-                style={{
-                  backgroundColor: '#FFF455',
-                  borderRadius: 10,
-                  padding: 10,
-                }}>
-                <Icon name="video" size={30} color="white" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={pickAudioDocument}>
-              <View
-                style={{
-                  backgroundColor: '#667BC6',
-                  borderRadius: 10,
-                  padding: 10,
-                }}>
-                <Icon name="file-audio" size={30} color="white" />
-              </View>
-            </TouchableOpacity>
+            <View
+              style={{flexDirection: 'row', justifyContent: 'space-around'}}>
+              <TouchableOpacity onPress={pickFileDocument}>
+                <View
+                  style={{
+                    backgroundColor: '#36C2CE',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="file" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickImageDocument}>
+                <View
+                  style={{
+                    backgroundColor: '#FF4191',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="image" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickVideoDocument}>
+                <View
+                  style={{
+                    backgroundColor: '#D0B8A8',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="video" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+                marginTop: 15,
+              }}>
+              <TouchableOpacity onPress={pickAudioDocument}>
+                <View
+                  style={{
+                    backgroundColor: '#667BC6',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="file-audio" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickLocation}>
+                <View
+                  style={{
+                    backgroundColor: '#FFD35A',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="map-marker-alt" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickVideoDocument}>
+                <View
+                  style={{
+                    backgroundColor: '#6C946F',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}>
+                  <Icon name="address-book" size={30} color="white" />
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
           <TouchableOpacity
             onPress={() => actionSheetRef.current?.hide()}
